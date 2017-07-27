@@ -1,2 +1,2 @@
 # Oasis
-Will build a Splunk cluster usin Docker
+Will build a Splunk cluster using Docker
