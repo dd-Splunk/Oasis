@@ -16,11 +16,11 @@ fi
 
 #
 # Define Search Factor (SF) Replication factor (RF) and number of Search Peers (SP)
-# 
+#
 
 SF=2
 RF=$(( SF + 1))
-SP=$(( RF + 0))
+SP=$(( RF + 1))
 
 CLUSTER_LABEL="OASIS"
 CLUSTER_KEY=$(openssl rand -hex 12)
@@ -171,8 +171,15 @@ for ((i = 1; i <= $SP; i++)); do
 				--env SPLUNK_CMD="edit cluster-config -mode slave -master_uri https://splunkmaster:8089 -replication_port 9100 -secret $CLUSTER_KEY -auth admin:changeme" \
 				--env SPLUNK_CMD_1='edit licenser-localslave -master_uri https://splunklicenseserver:8089 -auth admin:changeme' \
 				splunk/splunk
-		sleep 30
-		docker exec splunkpeer$i entrypoint.sh splunk restart
+done
+
+#
+# Restart all Peers to apply config changes
+#
+sleep 30
+for ((i = 1; i <= $SP; i++)); do
+  echo "Restarting Splunk Peer$i"
+  docker exec splunkpeer$i entrypoint.sh splunk restart
 done
 
 #
@@ -192,8 +199,8 @@ docker cp ./forwarder_outputs.conf splunkuf1:/opt/splunk/etc/system/local/output
 echo "Restarting forwarder"
 docker exec splunkuf1 entrypoint.sh splunk restart
 
-# 
-# Generate traffic with 
+#
+# Generate traffic with
 #   while true; do echo "$(date) Hello" >> /var/log/dpkg.log; sleep 10; done
 
 #
@@ -215,3 +222,11 @@ echo "Enabling forwarder for Indexer discovery"
 docker cp ./forwarder_outputs.conf splunkhf1:/opt/splunk/etc/system/local/outputs.conf
 echo "Restarting forwarder"
 docker exec splunkhf1 entrypoint.sh splunk restart
+
+#
+# Configure Licence Master to host the Monitoring Console
+#
+
+docker exec splunklicenseserver entrypoint.sh splunk add search-server splunkmaster:8089 -remoteUsername admin -remotePassword changeme -auth admin:changeme
+docker exec splunklicenseserver entrypoint.sh splunk edit cluster-config -mode searchhead -master_uri https://splunkmaster:8089 -secret $CLUSTER_KEY -auth admin:changeme
+docker exec splunklicenseserver entrypoint.sh splunk restart
