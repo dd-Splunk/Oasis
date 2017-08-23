@@ -18,7 +18,7 @@ fi
 # Define Search Factor (SF) Replication factor (RF) and number of Search Peers (SP)
 # 
 
-SF=1
+SF=2
 RF=$(( SF + 1))
 SP=$(( RF + 0))
 
@@ -105,7 +105,6 @@ docker run -d --net splunk \
     --name splunkmaster \
     --publish 8000 \
     --env SPLUNK_START_ARGS=--accept-license \
-    --env SPLUNK_ENABLE_LISTEN=9997 \
     --env SPLUNK_CMD="edit cluster-config -mode master -replication_factor $RF -search_factor $SF -secret $CLUSTER_KEY -cluster_label $CLUSTER_LABEL -auth admin:changeme" \
 		--env SPLUNK_CMD_1='edit licenser-localslave -master_uri https://splunklicenseserver:8089 -auth admin:changeme' \
     splunk/splunk
@@ -169,7 +168,7 @@ for ((i = 1; i <= $SP; i++)); do
 				--publish 8000 \
 				--env SPLUNK_START_ARGS=--accept-license \
 				--env SPLUNK_ENABLE_LISTEN=9997 \
-				--env SPLUNK_CMD="edit cluster-config -mode slave -master_uri https://splunkmaster:8089 -replication_port 9887 -secret $CLUSTER_KEY -auth admin:changeme" \
+				--env SPLUNK_CMD="edit cluster-config -mode slave -master_uri https://splunkmaster:8089 -replication_port 9100 -secret $CLUSTER_KEY -auth admin:changeme" \
 				--env SPLUNK_CMD_1='edit licenser-localslave -master_uri https://splunklicenseserver:8089 -auth admin:changeme' \
 				splunk/splunk
 		sleep 30
