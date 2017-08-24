@@ -22,6 +22,12 @@ SF=2
 RF=$(( SF + 1))
 SP=$(( RF + 1))
 
+#
+# Define number of Universal Forwarders (UF)
+#
+
+UF=2
+
 CLUSTER_LABEL="OASIS"
 CLUSTER_KEY=$(openssl rand -hex 12)
 
@@ -178,18 +184,22 @@ done
 # --- Create Forwarding tier
 #
 
-echo "Starting Universal Forwarder"
-docker run -d --net splunk \
-    --name splunkuf1 \
-    --hostname splunkuf1 \
-    --env SPLUNK_START_ARGS=--accept-license \
-    --env SPLUNK_DEPLOYMENT_SERVER='splunkdeploymentserver:8089' \
-    splunk/universalforwarder
+for ((i = 1; i <= $UF; i++)); do
+  echo "Starting Universal Forwarder"
+  docker run -d --net splunk \
+      --name splunkuf$i \
+      --hostname splunkuf$i \
+      --env SPLUNK_START_ARGS=--accept-license \
+      --env SPLUNK_DEPLOYMENT_SERVER='splunkdeploymentserver:8089' \
+      splunk/universalforwarder
+done
 sleep 30
-echo "Enabling forwarder for Indexer discovery"
-docker cp ./forwarder_outputs.conf splunkuf1:/opt/splunk/etc/system/local/outputs.conf
-echo "Restarting forwarder"
-docker exec splunkuf1 entrypoint.sh splunk restart
+for ((i = 1; i <= $UF; i++)); do
+  echo "Enabling forwarder $i for Indexer discovery"
+  docker cp ./forwarder_outputs.conf splunkuf$i:/opt/splunk/etc/system/local/outputs.conf
+  echo "Restarting forwarder"
+  docker exec splunkuf$i entrypoint.sh splunk restart
+done
 
 #
 # Generate traffic with
