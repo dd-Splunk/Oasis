@@ -2,3 +2,6 @@
 *.lic
 *.tgz
 *.spl
+#
+test.sh
+dd.sh
