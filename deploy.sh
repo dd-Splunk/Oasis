@@ -1,5 +1,17 @@
 #!/bin/bash
 
+# Helper function to avoid fixed sleep time waiting for a given container to become available
+wait_for_splunk_container ()
+{
+  port=$(docker port $1 8000)
+  until $(curl --output /dev/null --silent --head --fail http://localhost:${port##*:});
+  do
+    printf '.'
+    sleep 5
+  done
+  printf "\n"
+}
+
 #
 # This is a Splunk Enterprise deployment.
 # A valid license file must be present in ths same directory as this script
@@ -58,7 +70,7 @@ docker run -d --net splunk \
     --env SPLUNK_START_ARGS=--accept-license \
     splunk/splunk
 
-sleep 30
+wait_for_splunk_container splunklicenseserver
 echo "Add License"
 docker cp ./$LICENSE_FILE splunklicenseserver:/tmp/enterprise.lic
 docker exec splunklicenseserver entrypoint.sh splunk add licenses /tmp/enterprise.lic -auth admin:changeme
@@ -82,7 +94,7 @@ docker run -d --net splunk \
     --env SPLUNK_ENABLE_DEPLOY_SERVER=true \
     splunk/splunk
 
-sleep 30
+wait_for_splunk_container splunkdeploymentserver
 echo "Disable Indexing on Deployment server"
 docker cp ./search_head_outputs.conf splunkdeploymentserver:/opt/splunk/etc/system/local/
 docker exec splunkdeploymentserver bash -c "cd etc/system/local && cat search_head_outputs.conf >> outputs.conf"
@@ -114,7 +126,8 @@ docker run -d --net splunk \
     --env SPLUNK_CMD="edit cluster-config -mode master -replication_factor $RF -search_factor $SF -secret $CLUSTER_KEY -cluster_label $CLUSTER_LABEL -auth admin:changeme" \
 		--env SPLUNK_CMD_1='edit licenser-localslave -master_uri https://splunklicenseserver:8089 -auth admin:changeme' \
     splunk/splunk
-sleep 30
+
+wait_for_splunk_container splunkmaster
 echo "Enabling Indexer discovery on Master"
 docker cp ./master_server.conf splunkmaster:/opt/splunk/etc/system/local/
 docker exec splunkmaster bash -c "cd etc/system/local && cat master_server.conf >> server.conf"
@@ -125,7 +138,7 @@ docker exec splunkmaster bash -c "cd etc/system/local && cat search_head_outputs
 # Apply changes to cluster role and create master-apps directory
 echo "Restarting Master"
 docker exec splunkmaster entrypoint.sh splunk restart
-sleep 30
+wait_for_splunk_container splunkmaster
 
 echo "Upload Test app"
 cat apps/TA-oasis-test.tgz | docker exec -i splunkmaster tar Cxzf /opt/splunk/etc/master-apps/ -
@@ -147,7 +160,8 @@ docker run -d --net splunk \
     --env SPLUNK_CMD="edit cluster-config -mode searchhead -master_uri https://splunkmaster:8089 -secret $CLUSTER_KEY -auth admin:changeme" \
 		--env SPLUNK_CMD_1='edit licenser-localslave -master_uri https://splunklicenseserver:8089 -auth admin:changeme' \
     splunk/splunk
-sleep 30
+
+wait_for_splunk_container splunksh1
 echo "Disable Indexing on Search Head"
 docker cp ./search_head_outputs.conf splunksh1:/opt/splunk/etc/system/local/
 docker exec splunksh1 bash -c "cd etc/system/local && cat search_head_outputs.conf >> outputs.conf"
@@ -174,8 +188,9 @@ done
 #
 # Restart all Peers to apply config changes
 #
-sleep 30
+
 for ((i = 1; i <= $SP; i++)); do
+  wait_for_splunk_container splunkpeer$i
   echo "Restarting Splunk Peer$i"
   docker exec splunkpeer$i entrypoint.sh splunk restart
 done
@@ -193,7 +208,8 @@ for ((i = 1; i <= $UF; i++)); do
       --env SPLUNK_DEPLOYMENT_SERVER='splunkdeploymentserver:8089' \
       splunk/universalforwarder
 done
-sleep 30
+
+sleep 30 # Conatiner has no public port
 for ((i = 1; i <= $UF; i++)); do
   echo "Enabling forwarder $i for Indexer discovery"
   docker cp ./forwarder_outputs.conf splunkuf$i:/opt/splunk/etc/system/local/outputs.conf
@@ -219,7 +235,8 @@ docker run -d --net splunk \
     --env SPLUNK_CMD='enable app SplunkForwarder -auth admin:changeme' \
 		--env SPLUNK_CMD_1='edit licenser-localslave -master_uri https://splunklicenseserver:8089 -auth admin:changeme' \
     splunk/splunk
-sleep 30
+
+wait_for_splunk_container splunkhf1
 echo "Enabling forwarder for Indexer discovery"
 docker cp ./forwarder_outputs.conf splunkhf1:/opt/splunk/etc/system/local/outputs.conf
 echo "Restarting forwarder"
