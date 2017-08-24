@@ -77,7 +77,6 @@ docker exec splunklicenseserver entrypoint.sh splunk add licenses /tmp/enterpris
 echo "Disable Indexing on License master"
 docker cp ./search_head_outputs.conf splunklicenseserver:/opt/splunk/etc/system/local/
 docker exec splunklicenseserver bash -c "cd etc/system/local && cat search_head_outputs.conf >> outputs.conf"
-
 echo "Restarting License server"
 docker exec splunklicenseserver entrypoint.sh splunk restart
 
@@ -104,6 +103,7 @@ for apps in apps/*.tgz
 do
 	cat "$apps" | docker exec -i splunkdeploymentserver tar Cxzf /opt/splunk/etc/deployment-apps/ -
 done
+
 echo "Fixing permissions"
 docker exec splunkdeploymentserver chown -R splunk:splunk /opt/splunk/etc/deployment-apps/
 
@@ -138,8 +138,8 @@ docker exec splunkmaster bash -c "cd etc/system/local && cat search_head_outputs
 # Apply changes to cluster role and create master-apps directory
 echo "Restarting Master"
 docker exec splunkmaster entrypoint.sh splunk restart
-wait_for_splunk_container splunkmaster
 
+wait_for_splunk_container splunkmaster
 echo "Upload Test app"
 cat apps/TA-oasis-test.tgz | docker exec -i splunkmaster tar Cxzf /opt/splunk/etc/master-apps/ -
 echo "Fixing permissions"
@@ -152,6 +152,7 @@ docker exec splunkmaster entrypoint.sh splunk apply cluster-bundle --answer-yes 
 #
 
 echo "Starting Splunk Search Head1"
+wait_for_splunk_container splunkmaster # Needed to further build the cluster
 docker run -d --net splunk \
     --hostname splunksh1 \
     --name splunksh1 \
@@ -172,8 +173,9 @@ docker exec splunksh1 entrypoint.sh splunk restart
 # --- Create Search Peers (indexing nodes)
 #
 
+wait_for_splunk_container splunkmaster # Needed to further build the cluster
 for ((i = 1; i <= $SP; i++)); do
-		echo "Starting Splunk Peer$i"
+		echo "Starting splunkpeer$i"
 		docker run -d --net splunk \
 				--hostname splunkpeer$i \
 				--name splunkpeer$i \
@@ -191,7 +193,7 @@ done
 
 for ((i = 1; i <= $SP; i++)); do
   wait_for_splunk_container splunkpeer$i
-  echo "Restarting Splunk Peer$i"
+  echo "Restarting splunkpeer$i"
   docker exec splunkpeer$i entrypoint.sh splunk restart
 done
 
@@ -200,7 +202,7 @@ done
 #
 
 for ((i = 1; i <= $UF; i++)); do
-  echo "Starting Universal Forwarder"
+  echo "Starting splunkuf$i"
   docker run -d --net splunk \
       --name splunkuf$i \
       --hostname splunkuf$i \
@@ -209,11 +211,11 @@ for ((i = 1; i <= $UF; i++)); do
       splunk/universalforwarder
 done
 
-sleep 30 # Conatiner has no public port
+sleep 30 # Container has no public port
 for ((i = 1; i <= $UF; i++)); do
-  echo "Enabling forwarder $i for Indexer discovery"
+  echo "Enabling splunkuf$i for Indexer discovery"
   docker cp ./forwarder_outputs.conf splunkuf$i:/opt/splunk/etc/system/local/outputs.conf
-  echo "Restarting forwarder"
+  echo "Restarting splunkuf$i"
   docker exec splunkuf$i entrypoint.sh splunk restart
 done
 
@@ -237,9 +239,9 @@ docker run -d --net splunk \
     splunk/splunk
 
 wait_for_splunk_container splunkhf1
-echo "Enabling forwarder for Indexer discovery"
+echo "Enabling Heavy Forwarder for Indexer discovery"
 docker cp ./forwarder_outputs.conf splunkhf1:/opt/splunk/etc/system/local/outputs.conf
-echo "Restarting forwarder"
+echo "Restarting Heavy Forwarder"
 docker exec splunkhf1 entrypoint.sh splunk restart
 
 #
