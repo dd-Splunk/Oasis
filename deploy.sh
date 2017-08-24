@@ -129,14 +129,6 @@ echo "Applying Bundle"
 docker exec splunkmaster entrypoint.sh splunk apply cluster-bundle --answer-yes -auth admin:changeme
 
 #
-# --- Create a test index on the cluster
-#
-
-# echo "Creating test_index"
-# docker cp ./indexes.conf splunkmaster:/opt/splunk/etc/master-apps/_cluster/local/
-# docker exec splunkmaster entrypoint.sh splunk apply cluster-bundle --answer-yes -auth admin:changeme
-
-#
 # -- Create Search Head
 #
 
