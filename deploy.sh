@@ -40,8 +40,8 @@ SP=$(( RF + 1))
 
 UF=2
 
-CLUSTER_LABEL="OASIS"
-CLUSTER_KEY=$(openssl rand -hex 12)
+IX_CLUSTER_LABEL="OASIS"
+IX_CLUSTER_KEY=$(openssl rand -hex 12)
 
 #
 # --- Cleaning old Stuff
@@ -123,7 +123,7 @@ docker run -d --net splunk \
     --name splunkmaster \
     --publish 8000 \
     --env SPLUNK_START_ARGS=--accept-license \
-    --env SPLUNK_CMD="edit cluster-config -mode master -replication_factor $RF -search_factor $SF -secret $CLUSTER_KEY -cluster_label $CLUSTER_LABEL -auth admin:changeme" \
+    --env SPLUNK_CMD="edit cluster-config -mode master -replication_factor $RF -search_factor $SF -secret $IX_CLUSTER_KEY -IX_CLUSTER_LABEL $IX_CLUSTER_LABEL -auth admin:changeme" \
 		--env SPLUNK_CMD_1='edit licenser-localslave -master_uri https://splunklicenseserver:8089 -auth admin:changeme' \
     splunk/splunk
 
@@ -158,7 +158,7 @@ docker run -d --net splunk \
     --name splunksh1 \
     --publish 8000:8000 \
     --env SPLUNK_START_ARGS=--accept-license \
-    --env SPLUNK_CMD="edit cluster-config -mode searchhead -master_uri https://splunkmaster:8089 -secret $CLUSTER_KEY -auth admin:changeme" \
+    --env SPLUNK_CMD="edit cluster-config -mode searchhead -master_uri https://splunkmaster:8089 -secret $IX_CLUSTER_KEY -auth admin:changeme" \
 		--env SPLUNK_CMD_1='edit licenser-localslave -master_uri https://splunklicenseserver:8089 -auth admin:changeme' \
     splunk/splunk
 
@@ -182,7 +182,7 @@ for ((i = 1; i <= $SP; i++)); do
 				--publish 8000 \
 				--env SPLUNK_START_ARGS=--accept-license \
 				--env SPLUNK_ENABLE_LISTEN=9997 \
-				--env SPLUNK_CMD="edit cluster-config -mode slave -master_uri https://splunkmaster:8089 -replication_port 9100 -secret $CLUSTER_KEY -auth admin:changeme" \
+				--env SPLUNK_CMD="edit cluster-config -mode slave -master_uri https://splunkmaster:8089 -replication_port 9100 -secret $IX_CLUSTER_KEY -auth admin:changeme" \
 				--env SPLUNK_CMD_1='edit licenser-localslave -master_uri https://splunklicenseserver:8089 -auth admin:changeme' \
 				splunk/splunk
 done
@@ -249,5 +249,5 @@ docker exec splunkhf1 entrypoint.sh splunk restart
 #
 
 docker exec splunklicenseserver entrypoint.sh splunk add search-server splunkmaster:8089 -remoteUsername admin -remotePassword changeme -auth admin:changeme
-docker exec splunklicenseserver entrypoint.sh splunk edit cluster-config -mode searchhead -master_uri https://splunkmaster:8089 -secret $CLUSTER_KEY -auth admin:changeme
+docker exec splunklicenseserver entrypoint.sh splunk edit cluster-config -mode searchhead -master_uri https://splunkmaster:8089 -secret $IX_CLUSTER_KEY -auth admin:changeme
 docker exec splunklicenseserver entrypoint.sh splunk restart
