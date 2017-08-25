@@ -27,7 +27,7 @@ then
 fi
 
 #
-# Define Indexing Clsuter Search Factor (SF) Replication factor (RF) and number of Search Peers (SP)
+# Define Indexing Cluster Search Factor (SF) Replication factor (RF) and number of Search Peers (SP)
 #
 
 SF=2
@@ -156,10 +156,13 @@ echo "Applying Bundle"
 docker exec splunkmaster entrypoint.sh splunk apply cluster-bundle --answer-yes -auth admin:changeme
 
 #
-# -- Create Search Heads (non clustered)
+# -- Create Search Heads
 #
 
 wait_for_splunk_container splunkmaster # Needed to further build the cluster
+
+SH_LIST="" # Will hold the SH cluster member list
+
 for ((i = 1; i <= $SH; i++)); do
   echo "Starting Search Head splunksh$i"
   docker run -d --net splunk \
@@ -169,7 +172,9 @@ for ((i = 1; i <= $SH; i++)); do
       --env SPLUNK_START_ARGS=--accept-license \
       --env SPLUNK_CMD="edit cluster-config -mode searchhead -master_uri https://splunkmaster:8089 -secret $IX_CLUSTER_KEY -auth admin:changeme" \
   		--env SPLUNK_CMD_1='edit licenser-localslave -master_uri https://splunklicenseserver:8089 -auth admin:changeme' \
+  		--env SPLUNK_CMD_2="init shcluster-config -mgmt_uri https://splunksh$i:8089 -replication_port 9200 -secret $SH_CLUSTER_KEY -auth admin:changeme" \
       splunk/splunk
+      SH_LIST+=",https://splunksh$i:8089"
 done
 
 for ((i = 1; i <= $SH; i++)); do
@@ -180,6 +185,15 @@ for ((i = 1; i <= $SH; i++)); do
   echo "Restarting splunksh$i"
   docker exec splunksh$i entrypoint.sh splunk restart
 done
+
+#
+# Bootstrap SH cluster from splunksh1 using member list SH_LIST build during initialization getting rid of initial ","
+#
+
+wait_for_splunk_container splunksh1 # Needed to build the cluster
+docker exec splunksh1 entrypoint.sh splunk bootstrap shcluster-captain -servers_list ${SH_LIST#?} -auth admin:changeme
+docker exec splunksh1 entrypoint.sh splunk edit shcluster-config -shcluster_label $SH_CLUSTER_LABEL -auth admin:changeme
+docker exec splunksh1 entrypoint.sh splunk rolling-restart shcluster-members
 
 #
 # --- Create Search Peers (indexing nodes)
