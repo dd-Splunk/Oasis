@@ -52,7 +52,7 @@ IX_CLUSTER_KEY=$(openssl rand -hex 12)
 #
 
 SH=3
-SH_CLUSTER_LABEL="SH_$IX_CLUSTER"
+SH_CLUSTER_LABEL="SH_$IX_CLUSTER_LABEL"
 SH_CLUSTER_KEY=$(openssl rand -hex 12)
 
 #
