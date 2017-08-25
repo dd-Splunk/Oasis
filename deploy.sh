@@ -27,29 +27,29 @@ then
 fi
 
 #
-# Define Search Factor (SF) Replication factor (RF) and number of Search Peers (SP)
+# Define Indexing Clsuter Search Factor (SF) Replication factor (RF) and number of Search Peers (SP)
 #
 
 SF=2
 RF=$(( SF + 1))
 SP=$(( RF + 1))
 
-#
-# Define number of Universal Forwarders (UF)
-#
-
-UF=2
-
 IX_CLUSTER_LABEL="OASIS"
 IX_CLUSTER_KEY=$(openssl rand -hex 12)
 
 #
-# Define Search Head Cluster parameters
+# Define Search Head Cluster parameters, number of members (SH), Label and Secret
 #
 
 SH=3
 SH_CLUSTER_LABEL="SH_$IX_CLUSTER"
 SH_CLUSTER_KEY=$(openssl rand -hex 12)
+
+#
+# Define number of Universal Forwarders (UF)
+#
+
+UF=2
 
 #
 # --- Cleaning old Stuff
