@@ -16,3 +16,7 @@ Example applications are deployed using both the Deployment server for the Unive
 Indexer discovery is enabled
 
 The License server acts as Monitoring Console
+
+# To Do
+
+Disable indexing on the master node and the monitoring console instance
