@@ -44,6 +44,14 @@ IX_CLUSTER_LABEL="OASIS"
 IX_CLUSTER_KEY=$(openssl rand -hex 12)
 
 #
+# Define Search Head Cluster parameters
+#
+
+SH=3
+SH_CLUSTER_LABEL="SH_$IX_CLUSTER"
+SH_CLUSTER_KEY=$(openssl rand -hex 12)
+
+#
 # --- Cleaning old Stuff
 #
 
