@@ -156,26 +156,30 @@ echo "Applying Bundle"
 docker exec splunkmaster entrypoint.sh splunk apply cluster-bundle --answer-yes -auth admin:changeme
 
 #
-# -- Create Search Head
+# -- Create Search Heads (non clustered)
 #
 
-echo "Starting Splunk Search Head1"
 wait_for_splunk_container splunkmaster # Needed to further build the cluster
-docker run -d --net splunk \
-    --hostname splunksh1 \
-    --name splunksh1 \
-    --publish 8000:8000 \
-    --env SPLUNK_START_ARGS=--accept-license \
-    --env SPLUNK_CMD="edit cluster-config -mode searchhead -master_uri https://splunkmaster:8089 -secret $IX_CLUSTER_KEY -auth admin:changeme" \
-		--env SPLUNK_CMD_1='edit licenser-localslave -master_uri https://splunklicenseserver:8089 -auth admin:changeme' \
-    splunk/splunk
+for ((i = 1; i <= $SH; i++)); do
+  echo "Starting Search Head splunksh$i"
+  docker run -d --net splunk \
+      --hostname splunksh$i \
+      --name splunksh$i \
+      --publish 8000 \
+      --env SPLUNK_START_ARGS=--accept-license \
+      --env SPLUNK_CMD="edit cluster-config -mode searchhead -master_uri https://splunkmaster:8089 -secret $IX_CLUSTER_KEY -auth admin:changeme" \
+  		--env SPLUNK_CMD_1='edit licenser-localslave -master_uri https://splunklicenseserver:8089 -auth admin:changeme' \
+      splunk/splunk
+done
 
-wait_for_splunk_container splunksh1
-echo "Disable Indexing on Search Head"
-docker cp ./search_head_outputs.conf splunksh1:/opt/splunk/etc/system/local/
-docker exec splunksh1 bash -c "cd etc/system/local && cat search_head_outputs.conf >> outputs.conf"
-echo "Restarting Search Head"
-docker exec splunksh1 entrypoint.sh splunk restart
+for ((i = 1; i <= $SH; i++)); do
+  wait_for_splunk_container splunksh$i
+  echo "Disable Indexing on splunksh$i"
+  docker cp ./search_head_outputs.conf splunksh$i:/opt/splunk/etc/system/local/
+  docker exec splunksh$i bash -c "cd etc/system/local && cat search_head_outputs.conf >> outputs.conf"
+  echo "Restarting splunksh$i"
+  docker exec splunksh$i entrypoint.sh splunk restart
+done
 
 #
 # --- Create Search Peers (indexing nodes)
