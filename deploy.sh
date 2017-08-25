@@ -131,7 +131,7 @@ docker run -d --net splunk \
     --name splunkmaster \
     --publish 8000 \
     --env SPLUNK_START_ARGS=--accept-license \
-    --env SPLUNK_CMD="edit cluster-config -mode master -replication_factor $RF -search_factor $SF -secret $IX_CLUSTER_KEY -IX_CLUSTER_LABEL $IX_CLUSTER_LABEL -auth admin:changeme" \
+    --env SPLUNK_CMD="edit cluster-config -mode master -replication_factor $RF -search_factor $SF -secret $IX_CLUSTER_KEY -CLUSTER_LABEL $IX_CLUSTER_LABEL -auth admin:changeme" \
 		--env SPLUNK_CMD_1='edit licenser-localslave -master_uri https://splunklicenseserver:8089 -auth admin:changeme' \
     splunk/splunk
 
