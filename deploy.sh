@@ -166,7 +166,7 @@ for ((i = 1; i <= $SH; i++)); do
   docker exec splunksh$i bash -c "cd etc/system/local && cat search_head_outputs.conf >> outputs.conf"
   docker ps -a
   echo "Preparing SH cluster membership"
-  docker exec splunksh$i entrypoint.sh splunk init shcluster-config -mgmt_uri https://splunksh$i:8089 -replication_port 9200 -secret $SH_CLUSTER_KEY -auth $SPLUNK_ADMIN:$SPLUNK_ADMIN_PASSWORD
+  docker exec splunksh$i entrypoint.sh splunk init shcluster-config -mgmt_uri https://splunksh$i:8089 -replication_port 9200 -secret $SH_CLUSTER_KEY -shcluster_label $SH_CLUSTER_LABEL -auth $SPLUNK_ADMIN:$SPLUNK_ADMIN_PASSWORD
   docker ps -a
   echo "Restarting splunksh$i"
   docker exec splunksh$i entrypoint.sh splunk restart
@@ -179,8 +179,6 @@ done
 wait_for_splunk_container splunksh1 # Needed to build the cluster
 echo "Bootstrapping ..."
 docker exec splunksh1 entrypoint.sh splunk bootstrap shcluster-captain -servers_list ${SH_LIST#?} -auth $SPLUNK_ADMIN:$SPLUNK_ADMIN_PASSWORD
-wait_for_splunk_container splunksh1
-docker exec splunksh1 entrypoint.sh splunk edit shcluster-config -shcluster_label $SH_CLUSTER_LABEL -auth $SPLUNK_ADMIN:$SPLUNK_ADMIN_PASSWORD
 wait_for_splunk_container splunksh1
 echo "Restarting splunksh1 ..."
 docker exec splunksh1 entrypoint.sh splunk restart
