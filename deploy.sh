@@ -303,6 +303,11 @@ docker exec splunkhf1 entrypoint.sh splunk restart
 # Configure Licence Master to host the Monitoring Console
 #
 
+# Add cluster components
 docker exec splunklicenseserver entrypoint.sh splunk add search-server splunkmaster:8089 -remoteUsername $SPLUNK_ADMIN -remotePassword $SPLUNK_ADMIN_PASSWORD -auth $SPLUNK_ADMIN:$SPLUNK_ADMIN_PASSWORD
+for ((i = 1; i <= $SP; i++)); do
+  docker exec splunklicenseserver entrypoint.sh  splunk add search-server splunksh$i:8089 -remoteUsername $SPLUNK_ADMIN -remotePassword $SPLUNK_ADMIN_PASSWORD -auth $SPLUNK_ADMIN:$SPLUNK_ADMIN_PASSWORD
+done
+
 docker exec splunklicenseserver entrypoint.sh splunk edit cluster-config -mode searchhead -master_uri https://splunkmaster:8089 -secret $IX_CLUSTER_KEY -auth $SPLUNK_ADMIN:$SPLUNK_ADMIN_PASSWORD
 docker exec splunklicenseserver entrypoint.sh splunk restart
