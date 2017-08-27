@@ -17,7 +17,7 @@ Indexer discovery is enabled
 
 The License server acts as Monitoring Console
 
-!!! This is CPU intensive, with 4 CPU / 12GB RAM, I have unpredictable results. 6 CPU / 16GB RAM is fine
+!!! This is CPU intensive, with 2 Cores - 4 vCPU / 12GB RAM, I have unpredictable results. 3 Cores - 6 vCPU / 16GB RAM is fine
 
 # To Do
 
