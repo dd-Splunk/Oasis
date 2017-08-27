@@ -17,6 +17,8 @@ Indexer discovery is enabled
 
 The License server acts as Monitoring Console
 
+!!! This is CPU intensive, with 4 CPU / 12GB RAM, I have unpredictable results. 6 CPU / 16GB RAM is fine
+
 # To Do
 
 Disable indexing on the master node and the monitoring console instance
