@@ -5,9 +5,9 @@ Will build a Splunk single site cluster using Docker with:
   - 1 Deployment server
   - 3 Search Heads
   - 1 Master node
-  - 4 Indexing peers
-  - 2 Universal forwarders
-  - 1 Heavy forwarder
+  - x Indexing peers depending on the Search Factor ($SF) and Replication Factor ($RF)
+  - $UF Universal forwarders
+  - $HF Heavy forwarder
 
 As this is an enterprise deployment a valid Splunk Enterprise license must be provided in the file "enterprise.lic".
 
