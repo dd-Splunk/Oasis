@@ -42,7 +42,7 @@ echo ">Management user: $SPLUNK_ADMIN/$SPLUNK_ADMIN_PASSWORD"
 
 SF=1
 RF=$(( SF + 1))
-SP=$(( RF + 1))
+SP=$(( RF + 0))
 
 IX_CLUSTER_LABEL="OASIS"
 IX_CLUSTER_KEY=$(openssl rand -hex 12)
@@ -160,14 +160,11 @@ done
 
 for ((i = 1; i <= $SH; i++)); do
   wait_for_splunk_container splunksh$i
-  docker ps -a
   echo "Disable Indexing on splunksh$i"
   docker cp ./search_head_outputs.conf splunksh$i:/opt/splunk/etc/system/local/
   docker exec splunksh$i bash -c "cd etc/system/local && cat search_head_outputs.conf >> outputs.conf"
-  docker ps -a
   # echo "Preparing SH cluster membership"
   # docker exec splunksh$i entrypoint.sh splunk init shcluster-config -mgmt_uri https://splunksh$i:8089 -replication_port 9200 -secret $SH_CLUSTER_KEY -shcluster_label $SH_CLUSTER_LABEL -auth $SPLUNK_ADMIN:$SPLUNK_ADMIN_PASSWORD
-  # docker ps -a
   echo "Restarting splunksh$i"
   docker exec splunksh$i entrypoint.sh splunk restart
 done
