@@ -173,13 +173,16 @@ done
 #
 # Bootstrap SH cluster from splunksh1 using member list SH_LIST build during initialization getting rid of initial ","
 #
-
-# wait_for_splunk_container splunksh1 # Needed to build the cluster
-# echo "Bootstrapping ..."
-# docker exec splunksh1 entrypoint.sh splunk bootstrap shcluster-captain -servers_list ${SH_LIST#?} -auth $SPLUNK_ADMIN:$SPLUNK_ADMIN_PASSWORD
-# wait_for_splunk_container splunksh1
-# echo "Restarting splunksh1 ..."
-# docker exec splunksh1 entrypoint.sh splunk restart
+echo "Waiting for SHC members to be online ..."
+for ((i = 1; i <= $SH; i++)); do
+  echo ">splunksh$i"
+  wait_for_splunk_container splunksh$i
+done
+echo "Bootstrapping SHC..."
+docker exec splunksh1 entrypoint.sh splunk bootstrap shcluster-captain -servers_list ${SH_LIST#?} -auth $SPLUNK_ADMIN:$SPLUNK_ADMIN_PASSWORD
+sleep 60
+echo "Restarting SHC members..."
+docker exec splunksh1 entrypoint.sh splunk rolling-restart shcluster-members
 
 #
 # --- Create Search Peers (indexing nodes)
@@ -305,7 +308,7 @@ done
 
 # Add cluster components
 docker exec splunklicenseserver entrypoint.sh splunk add search-server splunkmaster:8089 -remoteUsername $SPLUNK_ADMIN -remotePassword $SPLUNK_ADMIN_PASSWORD -auth $SPLUNK_ADMIN:$SPLUNK_ADMIN_PASSWORD
-for ((i = 1; i <= $SP; i++)); do
+for ((i = 1; i <= $SH; i++)); do
   docker exec splunklicenseserver entrypoint.sh  splunk add search-server splunksh$i:8089 -remoteUsername $SPLUNK_ADMIN -remotePassword $SPLUNK_ADMIN_PASSWORD -auth $SPLUNK_ADMIN:$SPLUNK_ADMIN_PASSWORD
 done
 
