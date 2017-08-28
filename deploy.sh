@@ -59,7 +59,7 @@ SH_CLUSTER_KEY=$(openssl rand -hex 12)
 # Define number of Universal Forwarders (UF) and Heavy Forwarders (HF)
 #
 
-UF=1
+UF=0
 HF=0
 
 #
@@ -164,8 +164,8 @@ for ((i = 1; i <= $SH; i++)); do
   echo "Disable Indexing on splunksh$i"
   docker cp ./search_head_outputs.conf splunksh$i:/opt/splunk/etc/system/local/
   docker exec splunksh$i bash -c "cd etc/system/local && cat search_head_outputs.conf >> outputs.conf"
-  # echo "Preparing SH cluster membership"
-  # docker exec splunksh$i entrypoint.sh splunk init shcluster-config -mgmt_uri https://splunksh$i:8089 -replication_port 9200 -secret $SH_CLUSTER_KEY -shcluster_label $SH_CLUSTER_LABEL -auth $SPLUNK_ADMIN:$SPLUNK_ADMIN_PASSWORD
+  echo "Preparing SH cluster membership"
+  docker exec splunksh$i entrypoint.sh splunk init shcluster-config -mgmt_uri https://splunksh$i:8089 -replication_port 9200 -secret $SH_CLUSTER_KEY -shcluster_label $SH_CLUSTER_LABEL -auth $SPLUNK_ADMIN:$SPLUNK_ADMIN_PASSWORD
   echo "Restarting splunksh$i"
   docker exec splunksh$i entrypoint.sh splunk restart
 done
@@ -195,8 +195,7 @@ for ((i = 1; i <= $SP; i++)); do
 				--env SPLUNK_START_ARGS=--accept-license \
 				--env SPLUNK_ENABLE_LISTEN=9997 \
         --env SPLUNK_CMD="add user $SPLUNK_ADMIN -password $SPLUNK_ADMIN_PASSWORD -role admin -auth admin:changeme" \
-				--env SPLUNK_CMD_1="edit cluster-config -mode slave -master_uri https://splunkmaster:8089 -replication_port 9100 -secret $IX_CLUSTER_KEY -auth $SPLUNK_ADMIN:$SPLUNK_ADMIN_PASSWORD" \
-				--env SPLUNK_CMD_2="edit licenser-localslave -master_uri https://splunklicenseserver:8089 -auth $SPLUNK_ADMIN:$SPLUNK_ADMIN_PASSWORD" \
+				--env SPLUNK_CMD_1="edit licenser-localslave -master_uri https://splunklicenseserver:8089 -auth $SPLUNK_ADMIN:$SPLUNK_ADMIN_PASSWORD" \
 				splunk/splunk
 done
 
@@ -205,6 +204,8 @@ done
 #
 
 for ((i = 1; i <= $SP; i++)); do
+  wait_for_splunk_container splunkpeer$i
+  docker exec splunkpeer$i entrypoint.sh splunk edit cluster-config -mode slave -master_uri https://splunkmaster:8089 -replication_port 9100 -secret $IX_CLUSTER_KEY -auth $SPLUNK_ADMIN:$SPLUNK_ADMIN_PASSWORD
   wait_for_splunk_container splunkpeer$i
   echo "Restarting splunkpeer$i"
   docker exec splunkpeer$i entrypoint.sh splunk restart
