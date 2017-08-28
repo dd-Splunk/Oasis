@@ -22,5 +22,5 @@ The License server acts as Monitoring Console
 # To Do
 
 Disable indexing on the master node and the monitoring console instance
-Rolling restart of all SH allowing MC to monitor all SH instead of crude restart
+
 Use maintenance mode before properly restarting peers
