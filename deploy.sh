@@ -56,10 +56,11 @@ SH_CLUSTER_LABEL="SH_$IX_CLUSTER_LABEL"
 SH_CLUSTER_KEY=$(openssl rand -hex 12)
 
 #
-# Define number of Universal Forwarders (UF)
+# Define number of Universal Forwarders (UF) and Heavy Forwarders (HF)
 #
 
 UF=1
+HF=0
 
 #
 # --- Cleaning old Stuff
@@ -276,23 +277,26 @@ done
 # --- Heavy Forwarder
 #
 
-echo "Starting Heavy Forwarder"
-docker run -d --net splunk \
-    --hostname splunkhf1 \
-    --name splunkhf1 \
-    --publish 8000 \
-    --env SPLUNK_START_ARGS=--accept-license \
-    --env SPLUNK_DEPLOYMENT_SERVER='splunkdeploymentserver:8089' \
-    --env SPLUNK_CMD="add user $SPLUNK_ADMIN -password $SPLUNK_ADMIN_PASSWORD -role admin -auth admin:changeme" \
-    --env SPLUNK_CMD_1="enable app SplunkForwarder -auth $SPLUNK_ADMIN:$SPLUNK_ADMIN_PASSWORD" \
-		--env SPLUNK_CMD_2="edit licenser-localslave -master_uri https://splunklicenseserver:8089 -auth $SPLUNK_ADMIN:$SPLUNK_ADMIN_PASSWORD" \
-    splunk/splunk
-
-wait_for_splunk_container splunkhf1
-echo "Enabling Heavy Forwarder for Indexer discovery"
-docker cp ./forwarder_outputs.conf splunkhf1:/opt/splunk/etc/system/local/outputs.conf
-echo "Restarting Heavy Forwarder"
-docker exec splunkhf1 entrypoint.sh splunk restart
+for ((i = 1; i <= $UF; i++)); do
+  echo "Starting splunkhf$i"
+  docker run -d --net splunk \
+      --hostname splunkhf$i \
+      --name splunkhf$i \
+      --publish 8000 \
+      --env SPLUNK_START_ARGS=--accept-license \
+      --env SPLUNK_DEPLOYMENT_SERVER='splunkdeploymentserver:8089' \
+      --env SPLUNK_CMD="add user $SPLUNK_ADMIN -password $SPLUNK_ADMIN_PASSWORD -role admin -auth admin:changeme" \
+      --env SPLUNK_CMD_1="enable app SplunkForwarder -auth $SPLUNK_ADMIN:$SPLUNK_ADMIN_PASSWORD" \
+  		--env SPLUNK_CMD_2="edit licenser-localslave -master_uri https://splunklicenseserver:8089 -auth $SPLUNK_ADMIN:$SPLUNK_ADMIN_PASSWORD" \
+      splunk/splunk
+done
+for ((i = 1; i <= $UF; i++)); do
+  wait_for_splunk_container splunkhf$i
+  echo "Enabling splunkhf$i for Indexer discovery"
+  docker cp ./forwarder_outputs.conf splunkhf$i:/opt/splunk/etc/system/local/outputs.conf
+  echo "Restarting splunkhf$i"
+  docker exec splunkhf$i entrypoint.sh splunk restart
+done
 
 #
 # Configure Licence Master to host the Monitoring Console
